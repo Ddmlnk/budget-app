@@ -3,66 +3,53 @@ const router = express.Router();
 const db = require("../db/database");
 const auth = require("../middleware/auth");
 
-// Отримати всі транзакції
-router.get("/", auth, (req, res) => {
-  const transactions = db
-    .prepare(
-      `
+router.get("/", auth, async (req, res) => {
+  const rows = await db.all_(
+    `
     SELECT t.*, c.name as category_name
     FROM transactions t
     LEFT JOIN categories c ON t.category_id = c.id
     WHERE t.user_id = ?
     ORDER BY t.date DESC
   `,
-    )
-    .all(req.userId);
-  res.json(transactions);
+    [req.userId],
+  );
+  res.json(rows);
 });
 
-// Додати транзакцію
-router.post("/", auth, (req, res) => {
+router.post("/", auth, async (req, res) => {
   const { category_id, amount, type, description, date } = req.body;
-  if (!amount || !type || !date) {
+  if (!amount || !type || !date)
     return res.status(400).json({ error: "Заповніть всі поля" });
-  }
-  const result = db
-    .prepare(
-      `
-    INSERT INTO transactions (user_id, category_id, amount, type, description, date)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `,
-    )
-    .run(req.userId, category_id, amount, type, description, date);
-
-  res.json({ id: result.lastInsertRowid });
+  const result = await db.run_(
+    "INSERT INTO transactions (user_id, category_id, amount, type, description, date) VALUES (?, ?, ?, ?, ?, ?)",
+    [req.userId, category_id || null, amount, type, description, date],
+  );
+  res.json({ id: result.lastID });
 });
 
-// Редагувати транзакцію
-router.put("/:id", auth, (req, res) => {
+router.put("/:id", auth, async (req, res) => {
   const { category_id, amount, type, description, date } = req.body;
-  db.prepare(
-    `
-    UPDATE transactions SET category_id=?, amount=?, type=?, description=?, date=?
-    WHERE id=? AND user_id=?
-  `,
-  ).run(
-    category_id,
-    amount,
-    type,
-    description,
-    date,
-    req.params.id,
-    req.userId,
+  await db.run_(
+    "UPDATE transactions SET category_id=?, amount=?, type=?, description=?, date=? WHERE id=? AND user_id=?",
+    [
+      category_id || null,
+      amount,
+      type,
+      description,
+      date,
+      req.params.id,
+      req.userId,
+    ],
   );
   res.json({ success: true });
 });
 
-// Видалити транзакцію
-router.delete("/:id", auth, (req, res) => {
-  db.prepare("DELETE FROM transactions WHERE id=? AND user_id=?").run(
+router.delete("/:id", auth, async (req, res) => {
+  await db.run_("DELETE FROM transactions WHERE id=? AND user_id=?", [
     req.params.id,
     req.userId,
-  );
+  ]);
   res.json({ success: true });
 });
 
