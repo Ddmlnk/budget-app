@@ -1,66 +1,57 @@
-const sqlite3 = require("sqlite3").verbose();
-const path = require("path");
+const { Pool } = require("pg");
 
-const db = new sqlite3.Database(path.join(__dirname, "budget.db"));
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
+});
 
-db.serialize(() => {
-  db.run("PRAGMA foreign_keys = ON");
-  db.run("PRAGMA journal_mode = WAL");
+pool.get_ = (sql, params) => pool.query(sql, params).then((r) => r.rows[0]);
+pool.all_ = (sql, params) => pool.query(sql, params).then((r) => r.rows);
+pool.run_ = (sql, params) =>
+  pool.query(sql, params).then((r) => ({
+    lastID: r.rows[0]?.id,
+  }));
 
-  db.run(`CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+// Створюємо таблиці
+pool
+  .query(
+    `
+  CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`);
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
 
-  db.run(`CREATE TABLE IF NOT EXISTS categories (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
+  CREATE TABLE IF NOT EXISTS categories (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id),
     name TEXT NOT NULL,
-    type TEXT NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(id)
-  )`);
+    type TEXT NOT NULL
+  );
 
-  db.run(`CREATE TABLE IF NOT EXISTS transactions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    category_id INTEGER,
+  CREATE TABLE IF NOT EXISTS transactions (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    category_id INTEGER REFERENCES categories(id),
     amount REAL NOT NULL,
     type TEXT NOT NULL,
     description TEXT,
     date TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (category_id) REFERENCES categories(id)
-  )`);
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
 
-  db.run(`CREATE TABLE IF NOT EXISTS limits (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    category_id INTEGER NOT NULL,
+  CREATE TABLE IF NOT EXISTS limits (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    category_id INTEGER NOT NULL REFERENCES categories(id),
     amount REAL NOT NULL,
-    period TEXT DEFAULT 'monthly',
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (category_id) REFERENCES categories(id)
-  )`);
-});
+    period TEXT DEFAULT 'monthly'
+  );
+`,
+  )
+  .then(() => console.log("БД готова"))
+  .catch(console.error);
 
-// Хелпери щоб зручно використовувати як синхронний API
-db.get_ = (sql, params) =>
-  new Promise((res, rej) =>
-    db.get(sql, params, (e, row) => (e ? rej(e) : res(row))),
-  );
-db.all_ = (sql, params) =>
-  new Promise((res, rej) =>
-    db.all(sql, params, (e, rows) => (e ? rej(e) : res(rows))),
-  );
-db.run_ = (sql, params) =>
-  new Promise((res, rej) =>
-    db.run(sql, params, function (e) {
-      e ? rej(e) : res({ lastID: this.lastID });
-    }),
-  );
-
-module.exports = db;
+module.exports = pool;
