@@ -11,10 +11,11 @@ router.post("/register", async (req, res) => {
 
   try {
     const hashedPassword = bcrypt.hashSync(password, 10);
-    const result = await db.run_(
-      "INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
+    const result = await db.query(
+      "INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING id",
       [name, email, hashedPassword],
     );
+    const userId = result.rows[0].id;
 
     const categories = [
       { name: "Зарплата", type: "income" },
@@ -26,20 +27,20 @@ router.post("/register", async (req, res) => {
     ];
 
     for (const c of categories) {
-      await db.run_(
-        "INSERT INTO categories (user_id, name, type) VALUES (?, ?, ?)",
-        [result.lastID, c.name, c.type],
+      await db.query(
+        "INSERT INTO categories (user_id, name, type) VALUES ($1, $2, $3)",
+        [userId, c.name, c.type],
       );
     }
 
-    const token = jwt.sign({ userId: result.lastID }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ userId }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
     res.json({ token, name });
   } catch (err) {
-    if (err.message.includes("UNIQUE"))
+    if (err.message.includes("unique"))
       return res.status(400).json({ error: "Email вже існує" });
-    res.status(500).json({ error: "Помилка сервера" });
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -49,7 +50,10 @@ router.post("/login", async (req, res) => {
     return res.status(400).json({ error: "Заповніть всі поля" });
 
   try {
-    const user = await db.get_("SELECT * FROM users WHERE email = ?", [email]);
+    const result = await db.query("SELECT * FROM users WHERE email = $1", [
+      email,
+    ]);
+    const user = result.rows[0];
     if (!user || !bcrypt.compareSync(password, user.password)) {
       return res.status(400).json({ error: "Невірний email або пароль" });
     }
@@ -57,8 +61,8 @@ router.post("/login", async (req, res) => {
       expiresIn: "7d",
     });
     res.json({ token, name: user.name });
-  } catch {
-    res.status(500).json({ error: "Помилка сервера" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
