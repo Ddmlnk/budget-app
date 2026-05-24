@@ -26,7 +26,7 @@ function Dashboard() {
   const [transactions, setTransactions] = useState([]);
   const token = localStorage.getItem("token");
   const name = localStorage.getItem("name");
-  const { activeOwner } = useBudget();
+  const { activeOwner, setActiveOwner } = useBudget();
 
   useEffect(() => {
     const params = activeOwner ? `?owner_id=${activeOwner.id}` : "";
@@ -75,6 +75,12 @@ function Dashboard() {
       {activeOwner && (
         <div style={styles.banner}>
           👁️ Перегляд бюджету: <b>{activeOwner.name}</b>
+          <button
+            onClick={() => setActiveOwner(null)}
+            style={styles.myBudgetBtn}
+          >
+            Повернутись до свого
+          </button>
         </div>
       )}
 
@@ -271,6 +277,17 @@ const styles = {
     fontSize: "14px",
     textAlign: "center",
     padding: "40px 0",
+  },
+
+  myBudgetBtn: {
+    marginLeft: "auto",
+    padding: "6px 14px",
+    backgroundColor: "#6c5ce7",
+    color: "#fff",
+    border: "none",
+    borderRadius: "8px",
+    fontSize: "13px",
+    cursor: "pointer",
   },
 };
 
