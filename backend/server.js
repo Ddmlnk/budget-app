@@ -32,3 +32,6 @@ app.use("/api/categories", categoryRoutes);
 
 const limitRoutes = require("./routes/limits");
 app.use("/api/limits", limitRoutes);
+
+const shareRoutes = require("./routes/share");
+app.use("/api/share", shareRoutes);

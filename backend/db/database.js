@@ -5,14 +5,6 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false },
 });
 
-pool.get_ = (sql, params) => pool.query(sql, params).then((r) => r.rows[0]);
-pool.all_ = (sql, params) => pool.query(sql, params).then((r) => r.rows);
-pool.run_ = (sql, params) =>
-  pool.query(sql, params).then((r) => ({
-    lastID: r.rows[0]?.id,
-  }));
-
-// Створюємо таблиці
 pool
   .query(
     `
@@ -48,6 +40,14 @@ pool
     category_id INTEGER NOT NULL REFERENCES categories(id),
     amount REAL NOT NULL,
     period TEXT DEFAULT 'monthly'
+  );
+
+  CREATE TABLE IF NOT EXISTS shared_budgets (
+    id SERIAL PRIMARY KEY,
+    owner_id INTEGER NOT NULL REFERENCES users(id),
+    member_id INTEGER NOT NULL REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(owner_id, member_id)
   );
 `,
   )
