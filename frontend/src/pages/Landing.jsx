@@ -7,7 +7,7 @@ function Landing() {
     <div style={styles.page}>
       {/* Навбар */}
       <nav style={styles.nav}>
-        <div style={styles.logo}>💰 БюджетАпп</div>
+        <div style={styles.logo}>💰 Budget App</div>
         <div style={styles.navLinks}>
           <button onClick={() => navigate("/login")} style={styles.loginBtn}>
             Увійти
