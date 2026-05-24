@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "../api/axios";
+import { useBudget } from "../context/BudgetContext";
 
 const token = () => localStorage.getItem("token");
 const headers = () => ({ Authorization: `Bearer ${token()}` });
@@ -16,17 +17,17 @@ function Transactions() {
     description: "",
     date: new Date().toISOString().slice(0, 10),
   });
-
-  // Фільтри
   const [filterType, setFilterType] = useState("all");
   const [filterCategory, setFilterCategory] = useState("");
   const [filterFrom, setFilterFrom] = useState("");
   const [filterTo, setFilterTo] = useState("");
+  const { activeOwner } = useBudget();
 
   const load = async () => {
+    const ownerParam = activeOwner ? `?owner_id=${activeOwner.id}` : "";
     const [t, c] = await Promise.all([
-      axios.get("/api/transactions", { headers: headers() }),
-      axios.get("/api/categories", { headers: headers() }),
+      axios.get(`/api/transactions${ownerParam}`, { headers: headers() }),
+      axios.get(`/api/categories${ownerParam}`, { headers: headers() }),
     ]);
     setTransactions(t.data);
     setCategories(c.data);
@@ -34,9 +35,8 @@ function Transactions() {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [activeOwner]);
 
-  // Фільтрація
   const filtered = transactions.filter((t) => {
     if (filterType !== "all" && t.type !== filterType) return false;
     if (filterCategory && String(t.category_id) !== filterCategory)
@@ -81,12 +81,15 @@ function Transactions() {
 
   const handleSave = async () => {
     if (!form.amount || !form.date) return;
+    const data = { ...form };
+    if (activeOwner) data.owner_id = activeOwner.id;
+
     if (editing) {
-      await axios.put(`/api/transactions/${editing.id}`, form, {
+      await axios.put(`/api/transactions/${editing.id}`, data, {
         headers: headers(),
       });
     } else {
-      await axios.post("/api/transactions", form, { headers: headers() });
+      await axios.post("/api/transactions", data, { headers: headers() });
     }
     setShowModal(false);
     load();
@@ -100,7 +103,6 @@ function Transactions() {
 
   const fmt = (n) => Number(n).toLocaleString("uk-UA") + " ₴";
 
-  // Підсумки по відфільтрованих
   const totalIncome = filtered
     .filter((t) => t.type === "income")
     .reduce((s, t) => s + t.amount, 0);
@@ -111,7 +113,9 @@ function Transactions() {
   return (
     <div style={styles.page}>
       <div style={styles.header}>
-        <h2 style={styles.title}>Транзакції</h2>
+        <h2 style={styles.title}>
+          {activeOwner ? `Транзакції — ${activeOwner.name}` : "Транзакції"}
+        </h2>
         <button onClick={openAdd} style={styles.addBtn}>
           + Додати
         </button>
