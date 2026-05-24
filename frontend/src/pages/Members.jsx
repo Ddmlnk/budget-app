@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "../api/axios";
+import { useBudget } from "../context/BudgetContext";
 
 const headers = () => ({
   Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -12,6 +14,8 @@ function Members() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("my");
+  const { activeOwner, setActiveOwner } = useBudget();
+  const navigate = useNavigate();
 
   const load = async () => {
     const [m, a] = await Promise.all([
@@ -47,14 +51,33 @@ function Members() {
   const handleRemove = async (id) => {
     if (!confirm("Видалити учасника?")) return;
     await axios.delete(`/api/share/members/${id}`, { headers: headers() });
+    if (activeOwner?.id === id) setActiveOwner(null);
     load();
+  };
+
+  const handleViewBudget = (owner) => {
+    setActiveOwner(owner);
+    navigate("/dashboard");
+  };
+
+  const handleMyBudget = () => {
+    setActiveOwner(null);
+    navigate("/dashboard");
   };
 
   return (
     <div style={styles.page}>
       <h2 style={styles.title}>Спільний бюджет</h2>
 
-      {/* Запросити */}
+      {activeOwner && (
+        <div style={styles.activeBanner}>
+          👁️ Ви переглядаєте бюджет: <b>{activeOwner.name}</b>
+          <button onClick={handleMyBudget} style={styles.myBudgetBtn}>
+            Повернутись до свого
+          </button>
+        </div>
+      )}
+
       <div style={styles.inviteBox}>
         <h3 style={styles.sectionTitle}>Запросити учасника</h3>
         <p style={styles.hint}>
@@ -79,7 +102,6 @@ function Members() {
         </div>
       </div>
 
-      {/* Таби */}
       <div style={styles.tabs}>
         <button
           onClick={() => setActiveTab("my")}
@@ -101,7 +123,6 @@ function Members() {
         </button>
       </div>
 
-      {/* Мої учасники */}
       {activeTab === "my" && (
         <div style={styles.list}>
           {members.length === 0 ? (
@@ -126,7 +147,6 @@ function Members() {
         </div>
       )}
 
-      {/* Доступ до чужих */}
       {activeTab === "access" && (
         <div style={styles.list}>
           {access.length === 0 ? (
@@ -141,7 +161,12 @@ function Members() {
                   <div style={styles.name}>{a.name}</div>
                   <div style={styles.emailText}>{a.email}</div>
                 </div>
-                <span style={styles.accessBadge}>Маю доступ</span>
+                <button
+                  onClick={() => handleViewBudget(a)}
+                  style={styles.viewBtn}
+                >
+                  👁️ Переглянути
+                </button>
               </div>
             ))
           )}
@@ -158,6 +183,27 @@ const styles = {
     fontWeight: "700",
     color: "#2d3436",
     marginBottom: "24px",
+  },
+  activeBanner: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    backgroundColor: "#fff3cd",
+    padding: "12px 20px",
+    borderRadius: "10px",
+    marginBottom: "20px",
+    fontSize: "14px",
+    color: "#856404",
+  },
+  myBudgetBtn: {
+    marginLeft: "auto",
+    padding: "6px 14px",
+    backgroundColor: "#6c5ce7",
+    color: "#fff",
+    border: "none",
+    borderRadius: "8px",
+    fontSize: "13px",
+    cursor: "pointer",
   },
   inviteBox: {
     backgroundColor: "#fff",
@@ -259,6 +305,21 @@ const styles = {
     fontSize: "13px",
     cursor: "pointer",
   },
+  viewBtn: {
+    padding: "6px 14px",
+    backgroundColor: "#f0eeff",
+    color: "#6c5ce7",
+    border: "1px solid #6c5ce7",
+    borderRadius: "8px",
+    fontSize: "13px",
+    cursor: "pointer",
+  },
+  empty: {
+    textAlign: "center",
+    color: "#b2bec3",
+    padding: "40px 0",
+    fontSize: "14px",
+  },
   accessBadge: {
     padding: "4px 12px",
     backgroundColor: "#e8f8f2",
@@ -266,12 +327,6 @@ const styles = {
     borderRadius: "20px",
     fontSize: "12px",
     fontWeight: "600",
-  },
-  empty: {
-    textAlign: "center",
-    color: "#b2bec3",
-    padding: "40px 0",
-    fontSize: "14px",
   },
 };
 

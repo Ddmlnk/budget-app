@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "../api/axios";
+import { useBudget } from "../context/BudgetContext";
 import {
   BarChart,
   Bar,
@@ -10,7 +11,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  Legend,
 } from "recharts";
 
 const COLORS = [
@@ -26,31 +26,29 @@ function Dashboard() {
   const [transactions, setTransactions] = useState([]);
   const token = localStorage.getItem("token");
   const name = localStorage.getItem("name");
+  const { activeOwner } = useBudget();
 
   useEffect(() => {
+    const params = activeOwner ? `?owner_id=${activeOwner.id}` : "";
     axios
-      .get("/api/transactions", {
+      .get(`/api/transactions${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => setTransactions(res.data));
-  }, []);
+  }, [activeOwner]);
 
-  // Рахуємо баланс
   const income = transactions
     .filter((t) => t.type === "income")
     .reduce((sum, t) => sum + t.amount, 0);
-
   const expense = transactions
     .filter((t) => t.type === "expense")
     .reduce((sum, t) => sum + t.amount, 0);
-
   const balance = income - expense;
 
-  // Дані для стовпчастого графіку (останні 6 місяців)
   const getBarData = () => {
     const months = {};
     transactions.forEach((t) => {
-      const month = t.date.slice(0, 7); // "2025-01"
+      const month = t.date.slice(0, 7);
       if (!months[month]) months[month] = { month, income: 0, expense: 0 };
       if (t.type === "income") months[month].income += t.amount;
       else months[month].expense += t.amount;
@@ -58,15 +56,14 @@ function Dashboard() {
     return Object.values(months).slice(-6);
   };
 
-  // Дані для кругової діаграми (витрати по категоріях)
   const getPieData = () => {
     const cats = {};
     transactions
       .filter((t) => t.type === "expense")
       .forEach((t) => {
-        const name = t.category_name || "Інше";
-        if (!cats[name]) cats[name] = { name, value: 0 };
-        cats[name].value += t.amount;
+        const n = t.category_name || "Інше";
+        if (!cats[n]) cats[n] = { name: n, value: 0 };
+        cats[n].value += t.amount;
       });
     return Object.values(cats);
   };
@@ -75,9 +72,16 @@ function Dashboard() {
 
   return (
     <div style={styles.page}>
-      <h2 style={styles.title}>Вітаємо, {name}! 👋</h2>
+      {activeOwner && (
+        <div style={styles.banner}>
+          👁️ Перегляд бюджету: <b>{activeOwner.name}</b>
+        </div>
+      )}
 
-      {/* Картки */}
+      <h2 style={styles.title}>
+        {activeOwner ? `Бюджет ${activeOwner.name}` : `Вітаємо, ${name}! 👋`}
+      </h2>
+
       <div style={styles.cards}>
         <div style={{ ...styles.card, borderTop: "4px solid #6c5ce7" }}>
           <p style={styles.cardLabel}>Баланс</p>
@@ -102,7 +106,6 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* Графіки */}
       <div style={styles.charts}>
         <div style={styles.chartBox}>
           <h3 style={styles.chartTitle}>Доходи і витрати по місяцях</h3>
@@ -155,7 +158,6 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* Останні транзакції */}
       <div style={styles.tableBox}>
         <h3 style={styles.chartTitle}>Останні транзакції</h3>
         {transactions.length === 0 ? (
@@ -198,6 +200,14 @@ function Dashboard() {
 
 const styles = {
   page: { padding: "32px", maxWidth: "1100px", margin: "0 auto" },
+  banner: {
+    backgroundColor: "#fff3cd",
+    padding: "12px 20px",
+    borderRadius: "10px",
+    marginBottom: "16px",
+    fontSize: "14px",
+    color: "#856404",
+  },
   title: {
     fontSize: "22px",
     fontWeight: "700",
