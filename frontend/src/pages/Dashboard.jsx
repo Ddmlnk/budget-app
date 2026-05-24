@@ -278,6 +278,17 @@ const styles = {
     textAlign: "center",
     padding: "40px 0",
   },
+  banner: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    backgroundColor: "#fff3cd",
+    padding: "12px 20px",
+    borderRadius: "10px",
+    marginBottom: "16px",
+    fontSize: "14px",
+    color: "#856404",
+  },
 
   myBudgetBtn: {
     marginLeft: "auto",
