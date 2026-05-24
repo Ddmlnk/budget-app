@@ -3,9 +3,22 @@ const router = express.Router();
 const db = require("../db/database");
 const auth = require("../middleware/auth");
 
+const checkAccess = async (userId, ownerId) => {
+  if (userId === parseInt(ownerId)) return true;
+  const result = await db.query(
+    "SELECT id FROM shared_budgets WHERE owner_id = $1 AND member_id = $2",
+    [ownerId, userId],
+  );
+  return result.rows.length > 0;
+};
+
 router.get("/", auth, async (req, res) => {
+  const ownerId = req.query.owner_id || req.userId;
+  const hasAccess = await checkAccess(req.userId, ownerId);
+  if (!hasAccess) return res.status(403).json({ error: "Немає доступу" });
+
   const result = await db.query("SELECT * FROM categories WHERE user_id = $1", [
-    req.userId,
+    ownerId,
   ]);
   res.json(result.rows);
 });

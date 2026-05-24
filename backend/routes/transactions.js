@@ -3,7 +3,21 @@ const router = express.Router();
 const db = require("../db/database");
 const auth = require("../middleware/auth");
 
+// Перевірка доступу
+const checkAccess = async (userId, ownerId) => {
+  if (userId === parseInt(ownerId)) return true;
+  const result = await db.query(
+    "SELECT id FROM shared_budgets WHERE owner_id = $1 AND member_id = $2",
+    [ownerId, userId],
+  );
+  return result.rows.length > 0;
+};
+
 router.get("/", auth, async (req, res) => {
+  const ownerId = req.query.owner_id || req.userId;
+  const hasAccess = await checkAccess(req.userId, ownerId);
+  if (!hasAccess) return res.status(403).json({ error: "Немає доступу" });
+
   const result = await db.query(
     `
     SELECT t.*, c.name as category_name
@@ -12,18 +26,22 @@ router.get("/", auth, async (req, res) => {
     WHERE t.user_id = $1
     ORDER BY t.date DESC
   `,
-    [req.userId],
+    [ownerId],
   );
   res.json(result.rows);
 });
 
 router.post("/", auth, async (req, res) => {
-  const { category_id, amount, type, description, date } = req.body;
+  const { category_id, amount, type, description, date, owner_id } = req.body;
+  const ownerId = owner_id || req.userId;
+  const hasAccess = await checkAccess(req.userId, ownerId);
+  if (!hasAccess) return res.status(403).json({ error: "Немає доступу" });
+
   if (!amount || !type || !date)
     return res.status(400).json({ error: "Заповніть всі поля" });
   const result = await db.query(
     "INSERT INTO transactions (user_id, category_id, amount, type, description, date) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
-    [req.userId, category_id || null, amount, type, description, date],
+    [ownerId, category_id || null, amount, type, description, date],
   );
   res.json({ id: result.rows[0].id });
 });
