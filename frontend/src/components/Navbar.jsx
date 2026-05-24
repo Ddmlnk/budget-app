@@ -14,7 +14,7 @@ function Navbar({ onLogout }) {
 
   return (
     <nav style={styles.nav}>
-      <div style={styles.logo}>💰 БюджетАпп</div>
+      <div style={styles.logo}>💰 BudgetApp</div>
 
       <div style={styles.links}>
         <Link
