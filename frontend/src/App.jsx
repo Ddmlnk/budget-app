@@ -8,6 +8,7 @@ import Categories from "./pages/Categories";
 import Limits from "./pages/Limits";
 import Navbar from "./components/Navbar";
 import Members from "./pages/Members";
+import Landing from "./pages/Landing";
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem("token"));
@@ -36,6 +37,11 @@ function App() {
           path="/members"
           element={token ? <Members /> : <Navigate to="/login" />}
         />
+        <Route
+          path="/"
+          element={token ? <Navigate to="/dashboard" /> : <Landing />}
+        />
+
         <Route
           path="/login"
           element={
