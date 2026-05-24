@@ -6,8 +6,8 @@ import Dashboard from "./pages/Dashboard";
 import Transactions from "./pages/Transactions";
 import Categories from "./pages/Categories";
 import Limits from "./pages/Limits";
-import Navbar from "./components/Navbar";
 import Members from "./pages/Members";
+import Navbar from "./components/Navbar";
 import Landing from "./pages/Landing";
 
 function App() {
@@ -31,17 +31,8 @@ function App() {
       <Routes>
         <Route
           path="/"
-          element={<Navigate to={token ? "/dashboard" : "/login"} />}
-        />
-        <Route
-          path="/members"
-          element={token ? <Members /> : <Navigate to="/login" />}
-        />
-        <Route
-          path="/"
           element={token ? <Navigate to="/dashboard" /> : <Landing />}
         />
-
         <Route
           path="/login"
           element={
@@ -77,6 +68,10 @@ function App() {
         <Route
           path="/limits"
           element={token ? <Limits /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/members"
+          element={token ? <Members /> : <Navigate to="/login" />}
         />
       </Routes>
     </>
