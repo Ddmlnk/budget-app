@@ -53,6 +53,15 @@ function Navbar({ onLogout }) {
         >
           Ліміти
         </Link>
+        <Link
+          to="/members"
+          style={{
+            ...styles.link,
+            ...(isActive("/members") ? styles.active : {}),
+          }}
+        >
+          Учасники
+        </Link>
       </div>
 
       <div style={styles.user}>

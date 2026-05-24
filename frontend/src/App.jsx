@@ -7,6 +7,7 @@ import Transactions from "./pages/Transactions";
 import Categories from "./pages/Categories";
 import Limits from "./pages/Limits";
 import Navbar from "./components/Navbar";
+import Members from "./pages/Members";
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem("token"));
@@ -30,6 +31,10 @@ function App() {
         <Route
           path="/"
           element={<Navigate to={token ? "/dashboard" : "/login"} />}
+        />
+        <Route
+          path="/members"
+          element={token ? <Members /> : <Navigate to="/login" />}
         />
         <Route
           path="/login"
