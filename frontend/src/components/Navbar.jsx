@@ -7,7 +7,7 @@ function Navbar({ onLogout }) {
 
   const handleLogout = () => {
     onLogout();
-    navigate("/");
+    window.location.href = "/";
   };
 
   const isActive = (path) => location.pathname === path;
