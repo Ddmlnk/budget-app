@@ -36,10 +36,10 @@ function App() {
         <Route
           path="/login"
           element={
-            !token ? (
-              <Login onLogin={handleLogin} />
-            ) : (
+            token ? (
               <Navigate to="/dashboard" />
+            ) : (
+              <Login onLogin={handleLogin} />
             )
           }
         />
