@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "../api/axios";
+import { useBudget } from "../context/BudgetContext";
 
 const headers = () => ({
   Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -15,12 +16,14 @@ function Limits() {
     amount: "",
     period: "monthly",
   });
+  const { activeOwner } = useBudget();
 
   const load = async () => {
+    const ownerParam = activeOwner ? `?owner_id=${activeOwner.id}` : "";
     const [l, c, t] = await Promise.all([
-      axios.get("/api/limits", { headers: headers() }),
-      axios.get("/api/categories", { headers: headers() }),
-      axios.get("/api/transactions", { headers: headers() }),
+      axios.get(`/api/limits${ownerParam}`, { headers: headers() }),
+      axios.get(`/api/categories${ownerParam}`, { headers: headers() }),
+      axios.get(`/api/transactions${ownerParam}`, { headers: headers() }),
     ]);
     setLimits(l.data);
     setCategories(c.data.filter((c) => c.type === "expense"));
@@ -29,9 +32,8 @@ function Limits() {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [activeOwner]);
 
-  // Рахуємо витрати по категорії за поточний місяць
   const getSpent = (categoryId) => {
     const now = new Date();
     const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -47,7 +49,9 @@ function Limits() {
 
   const handleSave = async () => {
     if (!form.category_id || !form.amount) return;
-    await axios.post("/api/limits", form, { headers: headers() });
+    const data = { ...form };
+    if (activeOwner) data.owner_id = activeOwner.id;
+    await axios.post("/api/limits", data, { headers: headers() });
     setShowModal(false);
     setForm({ category_id: "", amount: "", period: "monthly" });
     load();
@@ -64,7 +68,9 @@ function Limits() {
   return (
     <div style={styles.page}>
       <div style={styles.header}>
-        <h2 style={styles.title}>Ліміти</h2>
+        <h2 style={styles.title}>
+          {activeOwner ? `Ліміти — ${activeOwner.name}` : "Ліміти"}
+        </h2>
         <button onClick={() => setShowModal(true)} style={styles.addBtn}>
           + Додати
         </button>
