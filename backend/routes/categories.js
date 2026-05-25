@@ -24,12 +24,16 @@ router.get("/", auth, async (req, res) => {
 });
 
 router.post("/", auth, async (req, res) => {
-  const { name, type } = req.body;
+  const { name, type, owner_id } = req.body;
+  const ownerId = owner_id || req.userId;
+  const hasAccess = await checkAccess(req.userId, ownerId);
+  if (!hasAccess) return res.status(403).json({ error: "Немає доступу" });
+
   if (!name || !type)
     return res.status(400).json({ error: "Заповніть всі поля" });
   const result = await db.query(
     "INSERT INTO categories (user_id, name, type) VALUES ($1, $2, $3) RETURNING id",
-    [req.userId, name, type],
+    [ownerId, name, type],
   );
   res.json({ id: result.rows[0].id, name, type });
 });

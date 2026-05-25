@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "../api/axios";
+import { useBudget } from "../context/BudgetContext";
 
 const headers = () => ({
   Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -9,22 +10,28 @@ function Categories() {
   const [categories, setCategories] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ name: "", type: "expense" });
+  const { activeOwner } = useBudget();
 
   const load = async () => {
-    const res = await axios.get("/api/categories", { headers: headers() });
+    const ownerParam = activeOwner ? `?owner_id=${activeOwner.id}` : "";
+    const res = await axios.get(`/api/categories${ownerParam}`, {
+      headers: headers(),
+    });
     setCategories(res.data);
   };
 
   useEffect(() => {
     load();
-  }, []);
+  }, [activeOwner]);
 
   const income = categories.filter((c) => c.type === "income");
   const expense = categories.filter((c) => c.type === "expense");
 
   const handleSave = async () => {
     if (!form.name.trim()) return;
-    await axios.post("/api/categories", form, { headers: headers() });
+    const data = { ...form };
+    if (activeOwner) data.owner_id = activeOwner.id;
+    await axios.post("/api/categories", data, { headers: headers() });
     setShowModal(false);
     setForm({ name: "", type: "expense" });
     load();
@@ -39,14 +46,15 @@ function Categories() {
   return (
     <div style={styles.page}>
       <div style={styles.header}>
-        <h2 style={styles.title}>Категорії</h2>
+        <h2 style={styles.title}>
+          {activeOwner ? `Категорії — ${activeOwner.name}` : "Категорії"}
+        </h2>
         <button onClick={() => setShowModal(true)} style={styles.addBtn}>
           + Додати
         </button>
       </div>
 
       <div style={styles.grid}>
-        {/* Витрати */}
         <div style={styles.section}>
           <h3 style={{ ...styles.sectionTitle, color: "#e17055" }}>
             🔴 Витрати
@@ -68,7 +76,6 @@ function Categories() {
           )}
         </div>
 
-        {/* Доходи */}
         <div style={styles.section}>
           <h3 style={{ ...styles.sectionTitle, color: "#00b894" }}>
             🟢 Доходи
